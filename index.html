@@ -3,62 +3,204 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Builder AI</title>
+    <title>BuildersAI - Real Takeoffs</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            background: #0b3d91;
-            color: white;
-            text-align: center;
-            padding: 50px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a1a;
+            color: #e0e0e0;
             margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #2d2d2d;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
         }
         h1 {
-            font-size: 3em;
-            margin: 20px 0;
+            text-align: center;
+            color: #00bfff;
+            margin-bottom: 10px;
         }
-        p {
-            font-size: 1.3em;
-            max-width: 700px;
-            margin: 0 auto 30px;
+        .subtitle {
+            text-align: center;
+            font-size: 1.1em;
+            color: #aaa;
+            margin-bottom: 30px;
         }
-        .upload-box {
-            background: white;
-            color: #0b3d91;
+        .upload-area {
+            border: 3px dashed #00bfff;
+            border-radius: 12px;
             padding: 40px;
-            border-radius: 15px;
-            display: inline-block;
-            margin: 20px;
-            min-width: 300px;
+            text-align: center;
+            background: #333;
+            transition: 0.3s;
+            cursor: pointer;
+        }
+        .upload-area:hover {
+            background: #3a3a3a;
+            border-color: #00d4ff;
+        }
+        .upload-area.dragover {
+            background: #444;
+            border-color: #00ff9d;
+        }
+        #file-input {
+            display: none;
+        }
+        .preview {
+            margin-top: 20px;
+            text-align: center;
+        }
+        .preview img, .preview iframe {
+            max-width: 100%;
+            max-height: 500px;
+            border: 2px solid #00bfff;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+        .chat-box {
+            margin-top: 30px;
+            background: #333;
+            padding: 15px;
+            border-radius: 8px;
+        }
+        #chat-input {
+            width: 100%;
+            padding: 12px;
+            background: #444;
+            border: 1px solid #555;
+            color: white;
+            border-radius: 8px;
+            font-size: 1em;
+        }
+        #chat-output {
+            margin-top: 15px;
+            padding: 15px;
+            background: #222;
+            border-radius: 8px;
+            min-height: 100px;
+            white-space: pre-wrap;
         }
         button {
-            background: #fcbb00;
-            color: #0b3d91;
+            background: #00bfff;
+            color: black;
             border: none;
-            padding: 15px 30px;
-            font-size: 1.2em;
+            padding: 12px 24px;
+            margin-top: 10px;
             border-radius: 8px;
+            font-weight: bold;
             cursor: pointer;
-            margin-top: 20px;
         }
         button:hover {
-            background: #e6a800;
+            background: #00d4ff;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            font-size: 0.9em;
+            color: #666;
         }
     </style>
 </head>
 <body>
-    <h1>Builder AI</h1>
-    <p>Upload your blueprint. Get lumber takeoffs, cost estimates, and timelines — instantly.</p>
+    <div class="container">
+        <h1>BuildersAI</h1>
+        <p class="subtitle">Upload plans. Get real takeoffs. No bullshit.</p>
 
-    <div class="upload-box">
-        <p><strong>Drop your blueprint here</strong></p>
-        <input type="file" accept="image/*,.pdf" style="margin:20px 0;">
-        <br>
-        <button>Analyze Plans</button>
+        <div class="upload-area" id="upload-area">
+            <p><strong>Drop PDF or Image Here</strong></p>
+            <p>or click to select</p>
+            <input type="file" id="file-input" accept=".pdf,.jpg,.jpeg,.png">
+        </div>
+
+        <div class="preview" id="preview" style="display:none;">
+            <h3>Plan Preview</h3>
+            <div id="preview-content"></div>
+            <p id="file-info"></p>
+        </div>
+
+        <div class="chat-box">
+            <h3>Refine Your Estimate</h3>
+            <input type="text" id="chat-input" placeholder="e.g., Cedar siding, 8/12 roof, Vancouver">
+            <button onclick="sendChat()">Update Estimate</button>
+            <div id="chat-output">Ask me anything about materials, labor, or timeline.</div>
+        </div>
+
+        <div class="footer">
+            Built by a 25-year BC custom home builder. Real numbers. Real speed.
+        </div>
     </div>
 
-    <p style="margin-top:50px; font-size:0.9em;">
-        Built by a 25-year custom home builder. Real numbers. No bullshit.
-    </p>
+    <script>
+        const uploadArea = document.getElementById('upload-area');
+        const fileInput = document.getElementById('file-input');
+        const preview = document.getElementById('preview');
+        const previewContent = document.getElementById('preview-content');
+        const fileInfo = document.getElementById('file-info');
+        const chatOutput = document.getElementById('chat-output');
+
+        // Click to upload
+        uploadArea.addEventListener('click', () => fileInput.click());
+
+        // Drag & drop
+        ['dragenter', 'dragover'].forEach(event => {
+            uploadArea.addEventListener(event, e => {
+                e.preventDefault();
+                uploadArea.classList.add('dragover');
+            });
+        });
+        ['dragleave', 'drop'].forEach(event => {
+            uploadArea.addEventListener(event, e => {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+            });
+        });
+
+        uploadArea.addEventListener('drop', e => {
+            const files = e.dataTransfer.files;
+            if (files.length) handleFile(files[0]);
+        });
+
+        fileInput.addEventListener('change', e => {
+            if (e.target.files.length) handleFile(e.target.files[0]);
+        });
+
+        function handleFile(file) {
+            const url = URL.createObjectURL(file);
+            preview.style.display = 'block';
+
+            if (file.type === 'application/pdf') {
+                previewContent.innerHTML = `<iframe src="${url}" width="100%" height="500"></iframe>`;
+                fileInfo.innerText = `PDF: ${file.name} (${(file.size/1024/1024).toFixed(2)} MB)`;
+            } else {
+                previewContent.innerHTML = `<img src="${url}" alt="Plan preview">`;
+                fileInfo.innerText = `Image: ${file.name} (${(file.size/1024).toFixed(1)} KB)`;
+            }
+
+            chatOutput.innerText = "Plan uploaded. Now ask: 'How many 2x6 studs?' or 'Cost in Kelowna?'";
+        }
+
+        function sendChat() {
+            const input = document.getElementById('chat-input').value.trim();
+            if (!input) return;
+
+            // FAKE AI RESPONSE (REAL ONE COMES LATER)
+            let response = "";
+            if (input.toLowerCase().includes("stud")) {
+                response = "Based on typical 2,400 sq ft home:\n• 2x6 @ 16\" OC: 312 pcs\n• 2x4 @ 16\" OC: 180 pcs\n• Waste factor: +12%\nTotal: ~540 studs";
+            } else if (input.toLowerCase().includes("roof")) {
+                response = "8/12 pitch, 2,400 sq ft:\n• Shingles: 72 squares\n• Underlayment: 7 rolls\n• Flashing: 180 LF\nLabor: 3 days @ $1,800/day";
+            } else {
+                response = `You said: "${input}"\n\nAI is listening. Real takeoff engine coming next.`;
+            }
+
+            chatOutput.innerText = response;
+            document.getElementById('chat-input').value = '';
+        }
+    </script>
 </body>
 </html>
